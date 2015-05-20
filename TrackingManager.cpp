@@ -3,7 +3,7 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/nonfree/features2d.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
-#include "TrackingAux.h"
+#include "TrackingManager.h"
 
 using namespace cv;
 using namespace std;

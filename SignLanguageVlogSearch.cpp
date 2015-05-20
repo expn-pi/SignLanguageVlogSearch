@@ -6,7 +6,7 @@
 #include "opencv2/nonfree/nonfree.hpp"
 
 #include "Flags.h"
-#include "TrackingAux.h"
+#include "TrackingManager.h"
 
 #include <stdio.h>
 #include <conio.h>
@@ -14,7 +14,7 @@
 using namespace cv;
 using namespace std;
 
-void drawKeyPoints(int index, Mat frame, TrackingAux *track){
+void drawKeyPoints(int index, Mat frame, TrackingManager *track){
 	bool details = true;
 	Mat frameClone = frame.clone();
 
@@ -24,7 +24,7 @@ void drawKeyPoints(int index, Mat frame, TrackingAux *track){
 	imshow(Flags::getDetectorName(), frameClone);
 }
 
-void drawTrackers(int index, Mat frame, TrackingAux *track){
+void drawTrackers(int index, Mat frame, TrackingManager *track){
 	bool details = true;
 	Mat frameClone = frame.clone();
 
@@ -36,7 +36,7 @@ void drawTrackers(int index, Mat frame, TrackingAux *track){
 	}
 }
 
-void drawMatches(int index, Mat frame, TrackingAux *track){
+void drawMatches(int index, Mat frame, TrackingManager *track){
 	bool details = true;
 	Mat frameClone = frame.clone();
 
@@ -48,13 +48,13 @@ void drawMatches(int index, Mat frame, TrackingAux *track){
 	}
 }
 
-void drawImages(int index, Mat frame, TrackingAux *track){
+void drawImages(int index, Mat frame, TrackingManager *track){
 	if (Flags::isShowkeypoints())drawKeyPoints(index, frame, track);
 	if (Flags::isShowTracking()) drawTrackers(index, frame, track);
 	if (Flags::isShowMatches()) drawMatches(index, frame, track);
 }
 
-void getStartData(int index, TrackingAux *track, Mat frame, Mat *lastFrame){
+void getStartData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
 	bool debug = true;
 	bool details = true;
 
@@ -69,7 +69,7 @@ void getStartData(int index, TrackingAux *track, Mat frame, Mat *lastFrame){
 	track->extractFeatures(index, frame);
 }
 
-void getBasisData(int index, TrackingAux *track, Mat frame, Mat *lastFrame){
+void getBasisData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
 	bool debug = true;
 	bool details = true;
 
@@ -90,7 +90,7 @@ void getBasisData(int index, TrackingAux *track, Mat frame, Mat *lastFrame){
 	}
 }
 
-void getTrackingData(int index, TrackingAux *track, Mat frame, Mat *lastFrame){
+void getTrackingData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
 	bool debug = true;
 	bool details = true;
 
@@ -111,13 +111,13 @@ void getTrackingData(int index, TrackingAux *track, Mat frame, Mat *lastFrame){
 	}
 }
 
-void getFullData(int index, TrackingAux *track, Mat frame, Mat *lastFrame){
+void getFullData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
 	getBasisData(index, track, frame, lastFrame);
 	getTrackingData(index, track, frame, lastFrame);
 }
 
 template<typename DataTypes>
-void getData(int index, TrackingAux *track, Mat frame, Mat *lastFrame, DataTypes dFunction){
+void getData(int index, TrackingManager *track, Mat frame, Mat *lastFrame, DataTypes dFunction){
 	if (Flags::isDebug()) cout << "\nRead the frame: " << index << "\n";
 
 	//Croup the image to remove not used information on bottom
@@ -134,7 +134,7 @@ void getData(int index, TrackingAux *track, Mat frame, Mat *lastFrame, DataTypes
 	(*lastFrame) = gray.clone();
 }
 
-void start(VideoCapture *capture, TrackingAux *track){
+void start(VideoCapture *capture, TrackingManager *track){
 	//Test if movie was load
 	if (Flags::isDebug()) cout << "Capturing" << "\n";
 	*capture = VideoCapture(Flags::getFileMovieName());
@@ -142,9 +142,9 @@ void start(VideoCapture *capture, TrackingAux *track){
 		throw "Error when reading steam_avi";
 
 	if (Flags::isDebug()) cout << "Initializing the tracker options" << "\n";
-	*track = TrackingAux::TrackingAux(Flags::getKeypointsNumber(), 0.001, 1, 3, false);
-	//TrackingAux track = TrackingAux::TrackingAux({ "SIFT", "SURF", "GFTT", "HARRIS" });// , "Dense"});
-	//TrackingAux track = TrackingAux::TrackingAux({ "HARRIS" });
+	*track = TrackingManager::TrackingManager(Flags::getKeypointsNumber(), 0.001, 1, 3, false);
+	//TrackingManager track = TrackingManager::TrackingManager({ "SIFT", "SURF", "GFTT", "HARRIS" });// , "Dense"});
+	//TrackingManager track = TrackingManager::TrackingManager({ "HARRIS" });
 
 	//Load the saved data
 	if (Flags::isLoadSaved()){
@@ -158,7 +158,7 @@ int _tmain(int argc, _TCHAR* argv[]){
 	initModule_nonfree();
 
 	VideoCapture capture;
-	TrackingAux track;
+	TrackingManager track;
 	
 	start(&capture, &track);
 
@@ -189,7 +189,6 @@ int _tmain(int argc, _TCHAR* argv[]){
 		index++;
 
 		waitKey(200);
-		//waitKey();
 	}
 
 	if (Flags::isArmazenateFrameData()){

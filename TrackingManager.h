@@ -12,7 +12,7 @@
 using namespace cv;
 using namespace std;
 
-class TrackingAux
+class TrackingManager
 {
 private:
 	//bool changeTrackPoints = false;
@@ -36,9 +36,9 @@ private:
 	vector<bool> lostPoints;
 
 public:
-	TrackingAux(){};
+	TrackingManager(){};
 
-	TrackingAux(int maxCorners, double qualityLevel, double minDistance, int blockSize = 3, bool harris = false, double k = 0.04){
+	TrackingManager(int maxCorners, double qualityLevel, double minDistance, int blockSize = 3, bool harris = false, double k = 0.04){
 
 		parameters.maxCorners = maxCorners;
 		parameters.qualityLevel = qualityLevel;
