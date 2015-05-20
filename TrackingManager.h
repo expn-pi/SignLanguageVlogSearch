@@ -128,7 +128,7 @@ public:
 	void trackElement(int index, Mat lastFrame, Mat frame){
 
 		bool debug = true;
-		bool details = true;
+		bool details = false;
 		
 		vector<Point2f> *input = frameManager.getTrackerInput(index);
 		if (details) cout << "\t\tcopying last points from tracker\n";
@@ -143,13 +143,13 @@ public:
 			(*input) = (*lastOutput);
 
 			//KeyPoint::convert(*keyPoints, *input);
-			if (details)cout << "Input Size 2: " << input->size() << "\n";
+			if (details) cout << "Input Size 2: " << input->size() << "\n";
 
 			vector<Point2f> *output = frameManager.getTrackerOutput(index);
 			vector<uchar> *status = frameManager.getTrackerStatus(index);
 			vector<float> *error = frameManager.getTrackerError(index);
 
-			waitKey();
+			if (details) waitKey();
 
 			if (debug)cout << "\nStarting tracking\n";
 			TermCriteria t = TermCriteria((TermCriteria::COUNT) + (TermCriteria::EPS), 30, 0.01);
@@ -212,9 +212,12 @@ public:
 		bool debug = true;
 		if (debug) cout << "\tGetting DMatch\n";
 
-		detecKeyPoints(index, frame);
-		extractFeatures(index, frame);
-		matchingFeatures(0, index);
+		if (!Flags::isLoadSaved()){
+			detecKeyPoints(index, frame);
+			extractFeatures(index, frame);
+		}
+
+		//matchingFeatures(0, index);
 
 		if (Flags::isRecuperateTrackerPoints()){
 			vector<DMatch> *actualMatching = frameManager.getMatches(index);

@@ -52,7 +52,7 @@ int Flags::keyPointsNumber = 128;
 bool Flags::newTracking = true;
 bool Flags::showTracking = true;
 double Flags::trackerError = 0.02;
-double Flags::trackerLostMax = 0.1;
+double Flags::trackerLostMax = 0.99;
 bool Flags::recuperateTrackerPoints = false;
 
 //Use aways new detections to track
@@ -68,7 +68,7 @@ bool Flags::showMatches = true;
 float Flags::matcherError = 250.0f;
 
 //Load file data
-bool Flags::loadSaved = false;
+bool Flags::loadSaved = true;
 
 //Save data in respectives files
-bool Flags::armazenateFrameData = true;
+bool Flags::armazenateFrameData = false;
