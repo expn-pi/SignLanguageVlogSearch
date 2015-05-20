@@ -137,6 +137,7 @@ public:
 		}
 	}
 
+
 	//Persistence
 	void saveKeypointsFile(int index, FileStorage fs){
 		string number = to_string(index);
@@ -147,31 +148,6 @@ public:
 		string number = to_string(index);
 		write(fs, "Frame-" + number, framesData[index].descriptors);
 	}
-	
-	//Override DMatch
-	/*friend void operator>>(const cv::FileNode &node, std::vector<cv::DMatch> &dMatch) {
-
-		node["distance"] >> dMatch.distance;
-		node["imgIdx"] >> dMatch.imgIdx;
-		//node["operator"] >> dMatch.operator<;
-		node["queryIdx"] >> dMatch.queryIdx;
-		node["trainIdx"] >> dMatch.trainIdx;
-
-	}
-
-	friend cv::FileStorage &operator<<(cv::FileStorage &fs, const std::vector<cv::DMatch> &dMatch) {
-	
-		fs << "{"
-		<< "distance" << dMatch.distance
-		<< "imgIdx" << dMatch.imgIdx
-		//<< "operator" << dMatch.operator<
-		<< "queryIdx" << dMatch.queryIdx
-		<< "trainIdx" << dMatch.trainIdx
-		<< "}";
-		return fs;
-
-	}*/
-	
 
 	void saveMatchesFile(int index, FileStorage fs){
 

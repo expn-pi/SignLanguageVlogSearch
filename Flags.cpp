@@ -52,7 +52,7 @@ int Flags::keyPointsNumber = 128;
 bool Flags::newTracking = true;
 bool Flags::showTracking = true;
 double Flags::trackerError = 0.02;
-double Flags::trackerLostMax = 0.99;
+double Flags::trackerLostMax = 0.1;
 bool Flags::recuperateTrackerPoints = false;
 
 //Use aways new detections to track

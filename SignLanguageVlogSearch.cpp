@@ -58,15 +58,18 @@ void getStartData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
 	bool debug = true;
 	bool details = true;
 
-	if (debug) cout << "\nGeting data of frame: " << index << "\n";
+	if (!Flags::isLoadSaved()){
 
-	if (debug) cout << "\tDetecting keypoints\n";
-	track->detecKeyPoints(index, frame);
+		if (debug) cout << "\nGeting data of frame: " << index << "\n";
 
-	track->passKeyPointsToTracker(index);
-	
-	if (debug) cout << "\tExtraction the features\n";
-	track->extractFeatures(index, frame);
+		if (debug) cout << "\tDetecting keypoints\n";
+		track->detecKeyPoints(index, frame);
+
+		track->passKeyPointsToTracker(index);
+
+		if (debug) cout << "\tExtraction the features\n";
+		track->extractFeatures(index, frame);
+	}
 }
 
 void getBasisData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
@@ -170,9 +173,7 @@ int _tmain(int argc, _TCHAR* argv[]){
 	int index = 0;
 	
 	//Loading the first frame
-	if (!Flags::isLoadSaved()){
-		getData(index, &track, frame, &lastFrame, getStartData); 
-	}
+	getData(index, &track, frame, &lastFrame, getStartData); 
 
 	capture >> frame;
 	

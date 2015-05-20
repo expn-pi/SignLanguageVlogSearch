@@ -128,16 +128,17 @@ public:
 	void trackElement(int index, Mat lastFrame, Mat frame){
 
 		bool debug = true;
-		bool details = false;
+		bool details = true;
 		
 		vector<Point2f> *input = frameManager.getTrackerInput(index);
 		if (details) cout << "\t\tcopying last points from tracker\n";
 		vector<Point2f> *lastOutput = frameManager.getTrackerOutput(index - 1);
-		if (details)cout << "Last Output Size: " << lastOutput->size() << "\n";
+		if (details)cout << "Input Size 2: " << input->size() << "\n";
+		if (details)cout << "Last Output Size 1: " << lastOutput->size() << "\n";
 		//vector<Point2f> lastOutPutBackUp = *lastOutput;
 
 		if (lastOutput->size() > 0){
-			if (details) cout << "Last Output Size: " << lastOutput->size() << "\n";
+			if (details) cout << "Last Output Size 2: " << lastOutput->size() << "\n";
 			
 			(*input) = (*lastOutput);
 
@@ -148,7 +149,7 @@ public:
 			vector<uchar> *status = frameManager.getTrackerStatus(index);
 			vector<float> *error = frameManager.getTrackerError(index);
 
-			//waitKey();
+			waitKey();
 
 			if (debug)cout << "\nStarting tracking\n";
 			TermCriteria t = TermCriteria((TermCriteria::COUNT) + (TermCriteria::EPS), 30, 0.01);
