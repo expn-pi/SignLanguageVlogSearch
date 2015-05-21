@@ -43,7 +43,11 @@ void drawMatches(int index, Mat frame, TrackingManager *track){
 	if (details) cout << "Drawing Matching: " << index << "\n";
 
 	if (index > 0){
-		track->drawMatchs(index, &frameClone);
+		if (Flags::isRecuperateTrackerPoints())
+			track->drawMatchs(0, index, &frameClone);
+		else
+			track->drawMatchs(index, &frameClone);
+
 		imshow(Flags::getMatcherName(), frameClone);
 	}
 }
@@ -103,14 +107,18 @@ void getTrackingData(int index, TrackingManager *track, Mat frame, Mat *lastFram
 
 		track->getLostTrackerPoint(index);
 
-		if (track->verifyLostTrackRate(Flags::getTrackerLostMax())){
-			track->recuperateTrackerPoints(index, frame);
+		if (Flags::isRecuperateTrackerPoints()){
+			if (track->verifyLostTrackRate(Flags::getTrackerLostMax())){
+				track->recuperateTrackerPoints(index, frame);
+			}
 		}
 	}
 
-	if (Flags::isNewMatches()){
-		if (debug) cout << "\tGetting the matches\n";
-		track->matchingFeatures(index);
+	if (!Flags::isRecuperateTrackerPoints()){
+		if (Flags::isNewMatches()){
+			if (debug) cout << "\tGetting the matches\n";
+			track->matchingFeatures(index);
+		}
 	}
 }
 

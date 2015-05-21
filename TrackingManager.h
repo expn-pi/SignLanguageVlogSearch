@@ -207,7 +207,6 @@ public:
 		bool details = true;
 
 		correspondences.clear();
-		//useDetectorPoints = true;
 
 		bool debug = true;
 		if (debug) cout << "\tGetting DMatch\n";
@@ -217,37 +216,36 @@ public:
 			extractFeatures(index, frame);
 		}
 
-		//matchingFeatures(0, index);
+		matchingFeatures(0, index);
 
-		if (Flags::isRecuperateTrackerPoints()){
-			vector<DMatch> *actualMatching = frameManager.getMatches(index);
-			vector<Point2f> *output = frameManager.getTrackerOutput(index);
-			vector<KeyPoint> *keyPoints = frameManager.getKeypoints(index);
+		/*vector<DMatch> *actualMatching = frameManager.getMatches(index);
+		vector<Point2f> *output = frameManager.getTrackerOutput(index);
+		vector<KeyPoint> *keyPoints = frameManager.getKeypoints(index);
 
-			if (details) cout << "Matching size: " << actualMatching->size();
+		if (details) cout << "Matching size: " << actualMatching->size();
 
-			if (debug) cout << "\tGetting Convertion\n";
-			vector<Point2f> keyPointsConverted;
-			KeyPoint::convert(*keyPoints, keyPointsConverted);
+		if (debug) cout << "\tGetting Convertion\n";
+		vector<Point2f> keyPointsConverted;
+		KeyPoint::convert(*keyPoints, keyPointsConverted);
 
-			for (int i = 0; i < actualMatching->size(); i++){
-				DMatch auxMatching = (*actualMatching)[i];
+		for (int i = 0; i < actualMatching->size(); i++){
+			DMatch auxMatching = (*actualMatching)[i];
 
-				if (lostPoints[i] && (auxMatching.distance < Flags::getMatcherError())){
-					lostPoints[i] = false;
+			if (lostPoints[i] && (auxMatching.distance < Flags::getMatcherError())){
+				lostPoints[i] = false;
 
-					if (debug) cout << "\t\tCorrespondence: " << auxMatching.queryIdx << ", is: " << auxMatching.trainIdx << "\n";
+				if (debug) cout << "\t\tCorrespondence: " << auxMatching.queryIdx << ", is: " << auxMatching.trainIdx << "\n";
 
-					correspondence c;
-					c.p1 = keyPointsConverted[auxMatching.queryIdx];
-					c.p2 = keyPointsConverted[auxMatching.trainIdx];
-					correspondences.push_back(c);
+				correspondence c;
+				c.p1 = keyPointsConverted[auxMatching.queryIdx];
+				c.p2 = keyPointsConverted[auxMatching.trainIdx];
+				correspondences.push_back(c);
 
-					(*output)[i].x = keyPointsConverted[auxMatching.trainIdx].x;
-					(*output)[i].y = keyPointsConverted[auxMatching.trainIdx].y;
-				}
+				(*output)[i].x = keyPointsConverted[auxMatching.trainIdx].x;
+				(*output)[i].y = keyPointsConverted[auxMatching.trainIdx].y;
 			}
-		}
+		}*/
+		
 	}
 
 	void printPoints(vector<Point2f> points, Mat image){
@@ -352,13 +350,16 @@ public:
 		//}
 	}
 		
-		//Drawer of matching points
 	void drawMatchs(int index, Mat *frame){
+		drawMatchs(index - 1, index, frame);
+	}
+		//Drawer of matching points
+	void drawMatchs(int idxPoint1, int idxPoint2, Mat *frame){
 		bool details = false;
-		vector<DMatch> *dMatchs = frameManager.getMatches(index);
+		vector<DMatch> *dMatchs = frameManager.getMatches(idxPoint2);
 
-		vector<KeyPoint> *points1 = frameManager.getKeypoints(index - 1);
-		vector<KeyPoint> *points2 = frameManager.getKeypoints(index);
+		vector<KeyPoint> *points1 = frameManager.getKeypoints(idxPoint1);
+		vector<KeyPoint> *points2 = frameManager.getKeypoints(idxPoint2);
 
 		if(details) cout << "Enter in draw matchs function\n";
 		//waitKey();

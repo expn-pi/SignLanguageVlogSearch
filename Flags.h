@@ -47,6 +47,7 @@ private:
 	static bool newMatches;//Extract Matches from descriptors
 	static bool showMatches;
 	static float matcherError;
+	static bool getBestMach;
 
 	static bool loadSaved;//Load file data
 	static bool useDetected;//Use aways new detections to track
@@ -159,7 +160,6 @@ public:
 	static double getTrackerLostMax(){
 		return trackerLostMax;
 	}
-
 	static bool isRecuperateTrackerPoints(){
 		return recuperateTrackerPoints;
 	}
@@ -167,16 +167,17 @@ public:
 	static bool isNewDescriptors(){
 		return newDescriptors;
 	}
-
 	static bool isNewMatches(){
 		return newMatches;
 	}
 	static bool isShowMatches(){
 		return showMatches;
 	}
-
 	static float getMatcherError(){
 		return matcherError;
+	}
+	static bool isGetBestMatch(){
+		return getBestMach;
 	}
 
 	static bool isLoadSaved(){

@@ -53,7 +53,7 @@ bool Flags::newTracking = true;
 bool Flags::showTracking = true;
 double Flags::trackerError = 0.02;
 double Flags::trackerLostMax = 0.99;
-bool Flags::recuperateTrackerPoints = false;
+bool Flags::recuperateTrackerPoints = true;
 
 //Use aways new detections to track
 bool Flags::useDetected = false;
@@ -65,7 +65,8 @@ bool Flags::changeTrackPoints = false;
 bool Flags::newDescriptors = false;
 bool Flags::newMatches = false;
 bool Flags::showMatches = true;
-float Flags::matcherError = 250.0f;
+float Flags::matcherError = 300.0f;
+bool Flags::getBestMach = true;
 
 //Load file data
 bool Flags::loadSaved = true;
