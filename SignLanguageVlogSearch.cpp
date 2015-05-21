@@ -56,6 +56,8 @@ void drawImages(int index, Mat frame, TrackingManager *track){
 	if (Flags::isShowkeypoints())drawKeyPoints(index, frame, track);
 	if (Flags::isShowTracking()) drawTrackers(index, frame, track);
 	if (Flags::isShowMatches()) drawMatches(index, frame, track);
+
+	waitKey(200);
 }
 
 void getStartData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
@@ -127,8 +129,8 @@ void getFullData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
 	getTrackingData(index, track, frame, lastFrame);
 }
 
-template<typename DataTypes>
-void getData(int index, TrackingManager *track, Mat frame, Mat *lastFrame, DataTypes dFunction){
+template<typename FunctionForProcess>
+void getData(int index, TrackingManager *track, Mat frame, Mat *lastFrame, FunctionForProcess functionForProcess){
 	if (Flags::isDebug()) cout << "\nRead the frame: " << index << "\n";
 
 	//Croup the image to remove not used information on bottom
@@ -138,11 +140,41 @@ void getData(int index, TrackingManager *track, Mat frame, Mat *lastFrame, DataT
 	Mat gray;
 	cvtColor(frameCrouped, gray, CV_BGR2GRAY);
 
-	if (Flags::isGetNewData()) dFunction(index, track, gray, lastFrame);
+	if (Flags::isGetNewData()) functionForProcess(index, track, gray, lastFrame);
 
 	if (Flags::isShowImage()) drawImages(index, frameCrouped, track);
 
 	(*lastFrame) = gray.clone();
+}
+
+void getBestMatch(){
+
+}
+
+template<typename FunctionForProcess>
+void processFrame(int *index, VideoCapture *capture, TrackingManager *track, Mat *frame, Mat *lastFrame, FunctionForProcess functionForProcess){
+	
+	getData(*index, track, *frame, lastFrame, functionForProcess);
+
+	(*capture) >> (*frame);
+
+	(*index) = (*index)+1;
+}
+
+void interateWithVideo(VideoCapture *capture, TrackingManager *track){
+
+	cv::Mat lastFrame;
+	cv::Mat frame;
+	int index = 0;
+
+	if (Flags::isDebug()) cout << "Puting the first frame on the variable" << "\n";
+	(*capture) >> frame;
+
+	processFrame(&index, capture, track, &frame, &lastFrame, getStartData);
+
+	while (!frame.empty()){
+		processFrame(&index, capture, track, &frame, &lastFrame, getFullData);
+	}
 }
 
 void start(VideoCapture *capture, TrackingManager *track){
@@ -156,12 +188,6 @@ void start(VideoCapture *capture, TrackingManager *track){
 	*track = TrackingManager::TrackingManager(Flags::getKeypointsNumber(), 0.001, 1, 3, false);
 	//TrackingManager track = TrackingManager::TrackingManager({ "SIFT", "SURF", "GFTT", "HARRIS" });// , "Dense"});
 	//TrackingManager track = TrackingManager::TrackingManager({ "HARRIS" });
-
-	//Load the saved data
-	if (Flags::isLoadSaved()){
-		cout << "Start loading new Data\n";
-		track->loadFramesData(Flags::getFileLocation());
-	}
 }
 
 int _tmain(int argc, _TCHAR* argv[]){
@@ -173,32 +199,18 @@ int _tmain(int argc, _TCHAR* argv[]){
 	
 	start(&capture, &track);
 
-	cv::Mat lastFrame;
-	if (Flags::isDebug()) cout << "Puting the actual frame on the variable" << "\n";
-	cv::Mat frame;
-	capture >> frame;
-
-	int index = 0;
-	
-	//Loading the first frame
-	getData(index, &track, frame, &lastFrame, getStartData); 
-
-	capture >> frame;
-	
-	index++;
-
-	waitKey(200);
-
-	while (!frame.empty()){
-
-		getData(index, &track, frame, &lastFrame, getFullData);
-		
-		capture >> frame;
-
-		index++;
-
-		waitKey(200);
+	//Load the saved data
+	if (Flags::isLoadSaved()){
+		cout << "Start loading new Data\n";
+		track.loadFramesData(Flags::getFileLocation());
 	}
+
+	if (Flags::isGetBestMatch()){
+		cout << "Getting the best frame to match with others\n";
+		getBestMatch();
+	}
+
+	interateWithVideo(&capture, &track);
 
 	if (Flags::isArmazenateFrameData()){
 		cout << "Armazenating data\n";

@@ -365,7 +365,7 @@ public:
 		//waitKey();
 
 		//if (points1->size() == points2->size()){
-			cout << "Pass throw basic condition\n";
+			if (details) cout << "Pass throw basic condition\n";
 			for (int i = 0; i < dMatchs->size(); i++){
 				
 				if (details) cout << i << ": Interating\n";
