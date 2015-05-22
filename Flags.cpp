@@ -10,9 +10,9 @@ Flags *Flags::instance;
 
 string Flags::nameOfDetector = "Good Features to track";//Not actualy contructing with this string
 //string Flags::nameOfDetector = "ORB";
-string Flags::nameOfExtractor = "SIFT";
+string Flags::nameOfExtractor = "SIFT";//Using the generic constructor
 string Flags::nameOfTracker = "calcOpticalFlowPyrLK";//There is no a generic constructor - using a function
-string Flags::nameOfMatcher = "BFMatcher";//There is no a generic constructor - using a function
+string Flags::nameOfMatcher = "BruteForce";//Using the generic constructor for BFMatcher with L2
 
 //\NCSLGR - DataBase\NCSLGRv4\movies\biker buddy
 
@@ -66,10 +66,11 @@ bool Flags::newDescriptors = false;
 bool Flags::newMatches = false;
 bool Flags::showMatches = true;
 float Flags::matcherError = 300.0f;
-bool Flags::getBestMach = true;
+bool Flags::getBestMach = false;
+int Flags::bestFrameToMatch = 19;
 
 //Load file data
-bool Flags::loadSaved = true;
+bool Flags::loadSaved = false;
 
 //Save data in respectives files
 bool Flags::armazenateFrameData = false;

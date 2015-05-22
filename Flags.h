@@ -48,6 +48,7 @@ private:
 	static bool showMatches;
 	static float matcherError;
 	static bool getBestMach;
+	static int bestFrameToMatch;
 
 	static bool loadSaved;//Load file data
 	static bool useDetected;//Use aways new detections to track
@@ -82,7 +83,7 @@ public:
 	}
 
 	static string getMatcherName(){
-		return nameOfExtractor + "/" + nameOfTracker;
+		return  nameOfMatcher;
 	}
 
 	static Flags& getInstance(){
@@ -178,6 +179,9 @@ public:
 	}
 	static bool isGetBestMatch(){
 		return getBestMach;
+	}
+	static int getBestFrameToMatch(){
+		return bestFrameToMatch;
 	}
 
 	static bool isLoadSaved(){

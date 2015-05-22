@@ -29,6 +29,8 @@ private:
 	
 	Ptr<DescriptorExtractor> featuresExtractor;//Create a generic smart pointer to the extractor.
 
+	Ptr<DescriptorMatcher> matcher;//Create a generic smart pointer to the matcher.
+
 	FrameManager frameManager;
 	FrameManager::gfttParameters parameters;
 
@@ -68,6 +70,9 @@ public:
 
 		featuresExtractor = DescriptorExtractor::create(Flags::getExtractorName());
 
+		matcher = DescriptorMatcher::create(Flags::getMatcherName());
+		//BFMatcher matcher(NORM_L2);
+
 		if (Flags::isDebug()) cout << "Starting the frame manager\n";
 		
 		frameManager = FrameManager();
@@ -75,6 +80,10 @@ public:
 		initialyseLostPointsVector();
 		
 		nameWindows();
+	}
+
+	int getFramesCount(){
+		return frameManager.getSize();
 	}
 
 	//Window manager
@@ -216,7 +225,7 @@ public:
 			extractFeatures(index, frame);
 		}
 
-		matchingFeatures(0, index);
+		matchingFeatures(Flags::getBestFrameToMatch(), index);
 
 		/*vector<DMatch> *actualMatching = frameManager.getMatches(index);
 		vector<Point2f> *output = frameManager.getTrackerOutput(index);
@@ -330,11 +339,40 @@ public:
 		matchingFeatures(index - 1, index);
 	}
 
-	void matchingFeatures(int idxDescriptor1, int idxDescriptor2){
+	void matchAll(string location){
+		//int frameCount = frameManager.getSize();
+
+		//vector<Mat> descriptors;
+
+		//for (int i = 0; i < frameCount; i++){
+		//	cout << "Get the descriptor: " << i << "\n";
+
+		//	Mat descriptor = *frameManager.getDescriptors(i);
+
+		//	cout << "Add the descriptor: " << i << "\n";
+
+		//	descriptors.push_back(descriptor);
+		//}
+
+		////matcher->add(descriptors);
+
+		//vector<DMatch> matches;
+		//matcher->match(descriptors[0], );
+
+		//string finalName = location + "//" + "MatchingAll" + Flags::getFileDataExtension();
+
+		//FileStorage fs(finalName, FileStorage::WRITE);
+
+		//matcher->write(fs);
+
+		//fs.release();
+	}
+
+	vector<DMatch> * matchingFeatures(int idxDescriptor1, int idxDescriptor2){
 		bool debug = false;
 		bool details = false;
 
-		BFMatcher matcher(NORM_L2);
+		//BFMatcher matcher(NORM_L2);
 
 		vector<DMatch> *matches = frameManager.getMatches(idxDescriptor2);
 
@@ -342,7 +380,9 @@ public:
 		Mat *actualDescriptors = frameManager.getDescriptors(idxDescriptor2);
 
 		//if (lastDescriptors->dims>0 && actualDescriptors->dims>0){
-			matcher.match(*lastDescriptors, *actualDescriptors, *matches);
+		matcher->match(*lastDescriptors, *actualDescriptors, *matches);
+
+		return matches;
 		//}
 		//else{
 			//cout << "Nothing to match\n";
@@ -385,13 +425,12 @@ public:
 
 
 	//Persistence
-	void loadFramesData2(string fileLocation){
-		frameManager.loadFramesData2(fileLocation);
-	}
-
-	//Persistence
 	void saveFramesData(string fileLocation){
 		frameManager.saveFramesData(fileLocation, Flags::getDetectorName(), parameters);
+	}
+
+	void loadFramesData2(string fileLocation){
+		frameManager.loadFramesData2(fileLocation);
 	}
 
 	void loadFramesData(string fileLocation){

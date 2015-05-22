@@ -44,7 +44,7 @@ void drawMatches(int index, Mat frame, TrackingManager *track){
 
 	if (index > 0){
 		if (Flags::isRecuperateTrackerPoints())
-			track->drawMatchs(0, index, &frameClone);
+			track->drawMatchs(Flags::getBestFrameToMatch(), index, &frameClone);
 		else
 			track->drawMatchs(index, &frameClone);
 
@@ -147,8 +147,72 @@ void getData(int index, TrackingManager *track, Mat frame, Mat *lastFrame, Funct
 	(*lastFrame) = gray.clone();
 }
 
-void getBestMatch(){
+float getMatchesSum(vector<DMatch> *matches){
+	
+	float sum = 0;
 
+	for (int i = 0; i < matches->size(); i++){
+		sum += (*matches)[i].distance;
+	}
+
+	return sum;
+}
+
+int getGoodMatchesCount(vector<DMatch> *matches){
+
+	int count = 0;
+
+	for (int i = 0; i < matches->size(); i++){
+		if ((*matches)[i].distance < Flags::getMatcherError()){
+			count++;
+		}
+	}
+
+	return count;
+}
+
+void getBestMatch(VideoCapture *capture, TrackingManager *track){
+
+	//track->matchAll(Flags::getFileLocation());
+	int size = track->getFramesCount();
+
+	//vector<float> frameMatchingSum;
+	vector<float> frameGoodMatchingCount;
+
+	cout << "put 0 in all\n";
+	for (int i = 0; i < size; i++){
+		//frameMatchingSum.push_back(0.0f);
+		frameGoodMatchingCount.push_back(0);
+	}
+
+	cout << "Sum all\n";
+	for (int i = 0; i < size; i++){
+		cout << "Compare ( " << i << ")\n";
+		for (int j = 0; j < size; j++){
+			if (i != j){
+				//cout << "Compare ( " << i << ", " << j << " )\n";
+				vector<DMatch> *matches = track->matchingFeatures(i, j);
+
+				frameGoodMatchingCount[i] += getGoodMatchesCount(matches);
+				//float sum = getMatchesSum(matches);
+				//frameMatchingSum[i] += sum;
+			}
+		}
+	}
+
+	int bestFrame = 0;
+
+	cout << "Results\n";
+	for (int i = 0; i < size; i++){
+		//cout << i<<": matches sum = "<< frameMatchingSum[i]<<"\n";
+		cout << i << ": Good matches count = " << frameGoodMatchingCount[i] << "\n";
+		if (frameGoodMatchingCount[i] > frameGoodMatchingCount[bestFrame]){
+			bestFrame = i;
+		}
+	}
+
+	cout << "The best frame is: " << bestFrame << "\n";
+	waitKey();
 }
 
 template<typename FunctionForProcess>
@@ -203,11 +267,11 @@ int _tmain(int argc, _TCHAR* argv[]){
 	if (Flags::isLoadSaved()){
 		cout << "Start loading new Data\n";
 		track.loadFramesData(Flags::getFileLocation());
-	}
 
-	if (Flags::isGetBestMatch()){
-		cout << "Getting the best frame to match with others\n";
-		getBestMatch();
+		if (Flags::isGetBestMatch()){
+			cout << "Getting the best frame to match with others\n";
+			getBestMatch(&capture, &track);
+		}
 	}
 
 	interateWithVideo(&capture, &track);
