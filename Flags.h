@@ -33,9 +33,13 @@ private:
 	static bool debug;//Debug the execution
 	static bool details;//Show details of debug
 
+	static float maxEuclidianDistance;
+
 	static bool newKeypoints;//Detect new keypoints
 	static bool showKeyPoints;
 	static int keyPointsNumber;
+	static int keyPointsRecuperateNumber;
+	static int keyPointsSize;
 
 	static bool newTracking;//Track new points
 	static bool showTracking;
@@ -49,6 +53,7 @@ private:
 	static float matcherError;
 	static bool getBestMach;
 	static int bestFrameToMatch;
+	static int knnValure;
 
 	static bool loadSaved;//Load file data
 	static bool useDetected;//Use aways new detections to track
@@ -73,18 +78,16 @@ public:
 	static string getDetectorName(){
 		return nameOfDetector;
 	}
-
 	static string getTrackerName(){
 		return nameOfTracker;
 	}
-
 	static string getExtractorName(){
 		return nameOfExtractor;
 	}
-
 	static string getMatcherName(){
 		return  nameOfMatcher;
 	}
+
 
 	static Flags& getInstance(){
 		if (instance == NULL){
@@ -113,11 +116,6 @@ public:
 		return movieExtension;
 	}
 
-	/*static int getIndex(){
-		return index;
-	}
-	*/
-
 	static bool isCreateFolders(){
 		return createFolders;
 	}
@@ -138,15 +136,24 @@ public:
 		return details;
 	}
 
+	static float getMaxEuclidianDistance(){
+		return maxEuclidianDistance;
+	}
+
 	static bool isNewKeypoints(){
 		return newKeypoints;
 	}
-	
 	static bool isShowkeypoints(){
 		return showKeyPoints;
 	}
-	static int getKeypointsNumber(){
+	static int getKeyPointsNumber(){
 		return keyPointsNumber;
+	}
+	static int getKeyPointsRecNumber(){
+		return keyPointsRecuperateNumber;
+	}
+	static int getKeyPointsSize(){
+		return keyPointsSize;
 	}
 
 	static bool isNewTracking(){
@@ -182,6 +189,9 @@ public:
 	}
 	static int getBestFrameToMatch(){
 		return bestFrameToMatch;
+	}
+	static int getKnnValure(){
+		return knnValure;
 	}
 
 	static bool isLoadSaved(){

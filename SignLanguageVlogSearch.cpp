@@ -14,141 +14,9 @@
 using namespace cv;
 using namespace std;
 
-void drawKeyPoints(int index, Mat frame, TrackingManager *track){
-	bool details = true;
-	Mat frameClone = frame.clone();
-
-	if (details) cout << "Drawing keypoints: " << index << "\n";
-	track->drawKeyPointsImage(index, &frameClone);
-
-	imshow(Flags::getDetectorName(), frameClone);
-}
-
-void drawTrackers(int index, Mat frame, TrackingManager *track){
-	bool details = true;
-	Mat frameClone = frame.clone();
-
-	if (details) cout << "Drawing tracking: " << index << "\n";
-
-	if (index > 0){
-		track->drawTrack(index, &frameClone);
-		imshow(Flags::getTrackerName(), frameClone);
-	}
-}
-
-void drawMatches(int index, Mat frame, TrackingManager *track){
-	bool details = true;
-	Mat frameClone = frame.clone();
-
-	if (details) cout << "Drawing Matching: " << index << "\n";
-
-	if (index > 0){
-		if (Flags::isRecuperateTrackerPoints())
-			track->drawMatchs(Flags::getBestFrameToMatch(), index, &frameClone);
-		else
-			track->drawMatchs(index, &frameClone);
-
-		imshow(Flags::getMatcherName(), frameClone);
-	}
-}
-
-void drawImages(int index, Mat frame, TrackingManager *track){
-	if (Flags::isShowkeypoints())drawKeyPoints(index, frame, track);
-	if (Flags::isShowTracking()) drawTrackers(index, frame, track);
-	if (Flags::isShowMatches()) drawMatches(index, frame, track);
-
-	waitKey(200);
-}
-
-void getStartData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
-	bool debug = true;
-	bool details = true;
-
-	if (!Flags::isLoadSaved()){
-
-		if (debug) cout << "\nGeting data of frame: " << index << "\n";
-
-		if (debug) cout << "\tDetecting keypoints\n";
-		track->detecKeyPoints(index, frame);
-
-		track->passKeyPointsToTracker(index);
-
-		if (debug) cout << "\tExtraction the features\n";
-		track->extractFeatures(index, frame);
-	}
-}
-
-void getBasisData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
-	bool debug = true;
-	bool details = true;
-
-	if (debug) cout << "\nGeting data of frame: " << index << "\n";
-
-	if (Flags::isNewKeypoints()){
-		if (debug) cout << "\tDetecting keypoints\n";
-		track->detecKeyPoints(index, frame);
-	}
-
-	if (Flags::isUseDetected()){
-		track->passKeyPointsToTracker(index);
-	}
-
-	if (Flags::isNewDescriptors()){
-		if (debug) cout << "\tExtraction the features\n";
-		track->extractFeatures(index, frame);
-	}
-}
-
-void getTrackingData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
-	bool debug = true;
-	bool details = true;
-
-	if (Flags::isNewTracking()){
-		if (debug) cout << "\tTracking\n";
-		track->trackElement(index, *lastFrame, frame);
-
-		track->getLostTrackerPoint(index);
-
-		if (Flags::isRecuperateTrackerPoints()){
-			if (track->verifyLostTrackRate(Flags::getTrackerLostMax())){
-				track->recuperateTrackerPoints(index, frame);
-			}
-		}
-	}
-
-	if (!Flags::isRecuperateTrackerPoints()){
-		if (Flags::isNewMatches()){
-			if (debug) cout << "\tGetting the matches\n";
-			track->matchingFeatures(index);
-		}
-	}
-}
-
-void getFullData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
-	getBasisData(index, track, frame, lastFrame);
-	getTrackingData(index, track, frame, lastFrame);
-}
-
-template<typename FunctionForProcess>
-void getData(int index, TrackingManager *track, Mat frame, Mat *lastFrame, FunctionForProcess functionForProcess){
-	if (Flags::isDebug()) cout << "\nRead the frame: " << index << "\n";
-
-	//Croup the image to remove not used information on bottom
-	Rect croup = Rect(0, 0, frame.cols, frame.rows - 65);
-
-	Mat frameCrouped = frame(croup).clone();
-	Mat gray;
-	cvtColor(frameCrouped, gray, CV_BGR2GRAY);
-
-	if (Flags::isGetNewData()) functionForProcess(index, track, gray, lastFrame);
-
-	if (Flags::isShowImage()) drawImages(index, frameCrouped, track);
-
-	(*lastFrame) = gray.clone();
-}
 
 float getMatchesSum(vector<DMatch> *matches){
-	
+
 	float sum = 0;
 
 	for (int i = 0; i < matches->size(); i++){
@@ -215,6 +83,162 @@ void getBestMatch(VideoCapture *capture, TrackingManager *track){
 	waitKey();
 }
 
+
+void drawKeyPoints(int index, Mat frame, TrackingManager *track){
+	bool details = false;
+	Mat frameClone = frame.clone();
+
+	if (details) cout << "\tDrawing keypoints: " << index << "\n";
+	track->drawKeyPointsImage(index, &frameClone);
+
+	imshow(Flags::getDetectorName(), frameClone);
+}
+
+void drawTrackers(int index, Mat frame, TrackingManager *track){
+	bool details = false;
+	Mat frameHit = frame.clone();
+	Mat frameMiss = frame.clone();
+
+	if (details) cout << "\tDrawing tracking: " << index << "\n";
+
+	if (index > 0){
+		track->drawTrack(index, &frameHit, &frameMiss);
+
+		if (details) cout << "\t\tShow hit images: " << index << "\n";
+		imshow(Flags::getTrackerName()+"-Hit", frameHit);
+
+		if (details) cout << "\t\tShow loose images: " << index << "\n";
+		imshow(Flags::getTrackerName() + "-Miss", frameMiss);
+
+		
+	}
+}
+
+void drawMatches(int index, Mat frame, TrackingManager *track){
+	bool details = false;
+	Mat frameHit = frame.clone();
+	Mat frameMiss = frame.clone();
+
+	if (details) cout << "\tDrawing Matching: " << index << "\n";
+
+	if (index > 0){
+		if (Flags::isRecuperateTrackerPoints())
+			track->drawMatchs(Flags::getBestFrameToMatch(), index, &frameHit, &frameMiss);
+		else
+			track->drawMatchs(index, &frameHit, &frameMiss);
+
+		imshow(Flags::getMatcherName()+"-Hit", frameHit);
+		imshow(Flags::getMatcherName() + "-Miss", frameMiss);
+	}
+}
+
+void drawImages(int index, Mat frame, TrackingManager *track){
+	if (Flags::isShowkeypoints())drawKeyPoints(index, frame, track);
+	if (Flags::isShowTracking()) drawTrackers(index, frame, track);
+	if (Flags::isShowMatches()) drawMatches(index, frame, track);
+
+	waitKey(50);
+}
+
+
+void getStartData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
+	bool debug = true;
+	bool details = true;
+
+	if (!Flags::isLoadSaved()){
+
+		if (debug) cout << "\n\tGeting data of frame: " << index << "\n";
+
+		if (debug) cout << "\t\tDetecting the first keypoints\n";
+		track->detecFirstKeyPoints(frame);
+		//detecFirstKeyPoints(Mat frame)
+		track->passKeyPointsToTracker(index);
+
+		track->extractTrackFeatures(index, frame);
+
+		if (debug) cout << "\t\tExtraction of the first features\n";
+		track->extractFeatures(index, frame);
+	}
+}
+
+void getBasisData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
+	bool debug = true;
+	bool details = true;
+
+	if (debug) cout << "\nGeting data of frame: " << index << "\n";
+
+	if (Flags::isNewKeypoints()){
+		if (debug) cout << "\tDetecting keypoints\n";
+		track->detecKeyPoints(index, frame);
+		//track->writeKeyPoints(index);
+		//waitKey();
+	}
+
+	if (Flags::isUseDetected()){
+		track->passKeyPointsToTracker(index);
+	}
+
+	if (Flags::isNewDescriptors()){
+		if (debug) cout << "\tExtraction the features\n";
+		track->extractFeatures(index, frame);
+	}
+}
+
+void getTrackingData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
+	bool debug = true;
+	bool details = true;
+
+	if (Flags::isNewTracking()){
+		if (debug) cout << "\tTracking\n";
+
+		track->trackElement(index, *lastFrame, frame);
+
+		track->extractTrackFeatures(index, frame);
+
+		track->getLostTrackerPoint(index);
+
+		if (Flags::isRecuperateTrackerPoints()){
+			if (track->verifyLostTrackRate(Flags::getTrackerLostMax())){
+				track->recuperateTrackerPoints(index, frame);
+			}
+		}
+	}
+
+	if (!Flags::isRecuperateTrackerPoints()){
+		if (Flags::isNewMatches()){
+			if (debug) cout << "\tGetting the matches\n";
+			track->matchingFeatures(index);
+		}
+	}
+}
+
+void getFullData(int index, TrackingManager *track, Mat frame, Mat *lastFrame){
+	getBasisData(index, track, frame, lastFrame);
+	getTrackingData(index, track, frame, lastFrame);
+}
+
+template<typename FunctionForProcess>
+void getData(int index, TrackingManager *track, Mat frame, Mat *lastFrame, FunctionForProcess functionForProcess){
+	if (Flags::isDebug()) cout << "\nRead the frame: " << index << "\n";
+
+	//Croup the image to remove not used information on bottom
+	Rect croup = Rect(0, 0, frame.cols, frame.rows - 65);
+
+	Mat frameCrouped = frame(croup).clone();
+	Mat gray;
+	cvtColor(frameCrouped, gray, CV_BGR2GRAY);
+
+	track->armazenateImage(index, &frame);
+
+	if (Flags::isGetNewData()) functionForProcess(index, track, gray, lastFrame);
+
+	if (Flags::isShowImage()) drawImages(index, frameCrouped, track);
+
+	track->drawLostMatches();
+
+	(*lastFrame) = gray.clone();
+}
+
 template<typename FunctionForProcess>
 void processFrame(int *index, VideoCapture *capture, TrackingManager *track, Mat *frame, Mat *lastFrame, FunctionForProcess functionForProcess){
 	
@@ -249,7 +273,7 @@ void start(VideoCapture *capture, TrackingManager *track){
 		throw "Error when reading steam_avi";
 
 	if (Flags::isDebug()) cout << "Initializing the tracker options" << "\n";
-	*track = TrackingManager::TrackingManager(Flags::getKeypointsNumber(), 0.001, 1, 3, false);
+	*track = TrackingManager::TrackingManager(Flags::getKeyPointsNumber(), 0.01, 4, true);
 	//TrackingManager track = TrackingManager::TrackingManager({ "SIFT", "SURF", "GFTT", "HARRIS" });// , "Dense"});
 	//TrackingManager track = TrackingManager::TrackingManager({ "HARRIS" });
 }

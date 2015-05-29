@@ -8,6 +8,7 @@
 
 //#include "Flags.h"
 #include "FrameManager.h"
+#include "TrackPointsManager.h"
 
 using namespace cv;
 using namespace std;
@@ -18,14 +19,8 @@ private:
 	//bool changeTrackPoints = false;
 	bool useDetectorPoints = true;
 
-	struct correspondence{
-		Point2f p1;
-		Point2f p2;
-	};
-	vector<correspondence> correspondences;
-
 	Ptr<FeatureDetector> featuresDetector;// Create a generic smart pointer for detectors.
-	Ptr<FeatureDetector> featuresDetector2;// Create a generic smart pointer for detectors.
+	Ptr<FeatureDetector> detectorRecuperate;// Create a generic smart pointer for detectors.
 	
 	Ptr<DescriptorExtractor> featuresExtractor;//Create a generic smart pointer to the extractor.
 
@@ -34,18 +29,17 @@ private:
 	FrameManager frameManager;
 	FrameManager::gfttParameters parameters;
 
-	int countLostPoints = 0;
-	vector<bool> lostPoints;
+	TrackingPointsManager trackingPointsManager;
+	vector<Scalar> colors;
 
 public:
 	TrackingManager(){};
 
-	TrackingManager(int maxCorners, double qualityLevel, double minDistance, int blockSize = 3, bool harris = false, double k = 0.04){
+	TrackingManager(int maxCorners, double qualityLevel, double minDistance, bool harris = false, double k = 0.04){
 
 		parameters.maxCorners = maxCorners;
 		parameters.qualityLevel = qualityLevel;
 		parameters.minDistance = minDistance;
-		parameters.blockSize = blockSize;
 		parameters.harris = harris;
 		parameters.k = k;
 
@@ -56,11 +50,14 @@ public:
 			if (Flags::isDebug()) cout << "\t\tInitializing the descriptor: " << Flags::getDetectorName() << "\n";
 			//featuresDetector = FeatureDetector::create("SIFT");
 			if (Flags::getDetectorName() == "Good Features to track")
-				featuresDetector = new GoodFeaturesToTrackDetector(maxCorners, qualityLevel, minDistance, blockSize, harris, k);
+				featuresDetector = new GoodFeaturesToTrackDetector(maxCorners, qualityLevel, minDistance, Flags::getKeyPointsSize(), harris, k);
 			else
 				featuresDetector = FeatureDetector::create(Flags::getDetectorName());
 
-			featuresDetector2 = new GoodFeaturesToTrackDetector(8.0f*maxCorners, qualityLevel, minDistance, blockSize, harris, k);
+			if (Flags::isRecuperateTrackerPoints()){
+				detectorRecuperate = new GoodFeaturesToTrackDetector(Flags::getKeyPointsRecNumber(), qualityLevel, minDistance,
+					Flags::getKeyPointsSize(), harris, k);
+			}
 		}
 
 		if (Flags::isNewDescriptors()){
@@ -76,9 +73,7 @@ public:
 		if (Flags::isDebug()) cout << "Starting the frame manager\n";
 		
 		frameManager = FrameManager();
-		
-		initialyseLostPointsVector();
-		
+
 		nameWindows();
 	}
 
@@ -94,18 +89,28 @@ public:
 		}
 
 		if (Flags::isShowTracking()){
-			namedWindow(Flags::getTrackerName());
+			namedWindow(Flags::getTrackerName() + "-Hit");
+			namedWindow(Flags::getTrackerName() + "-Miss");
 		}
 
 		if (Flags::isShowMatches()){
-			namedWindow(Flags::getMatcherName());
+			namedWindow(Flags::getMatcherName() + "-Hit");
+			namedWindow(Flags::getMatcherName() + "-Miss");
 		}
+	}
+
+	void detecFirstKeyPoints(Mat frame){
+		detecKeyPoints(0, frame);
+		vector<KeyPoint> * keyPoints = frameManager.getKeypoints(0);
+		cout << "Founded: " << keyPoints->size() << ", of: " << Flags::getKeyPointsNumber() << " keyPoints\n";
+		trackingPointsManager = TrackingPointsManager(keyPoints->size());
+		initialyseColorVector();
 	}
 
 	//Detector of interest points
 	void detecKeyPoints(int index, Mat frame){
 		bool debug = true;
-		bool details = true;
+		bool details = false;
 
 		if (debug) cout << "Detecting key points of index: " << index << "\n";
 
@@ -113,8 +118,22 @@ public:
 		//if (index == 0)
 			featuresDetector->detect(frame, *keyPoints);
 			if (details) cout << "amount of keyPoints: " << keyPoints->size() << "\n";
+
 		//else
 			//featuresDetector2->detect(frame, *keyPoints);
+
+			if (details) waitKey();
+	}
+
+	void writeKeyPoints(int index){
+		vector<KeyPoint> * keyPoints = frameManager.getKeypoints(index);
+
+		for (int i = 0; i < keyPoints->size(); i++){
+			KeyPoint keyPoint = (*keyPoints)[i];
+
+			cout << i << ": , Size: " << keyPoint.size << ", Angle: " << keyPoint.angle << ", Octave: " << keyPoint.octave
+				<< ", Response: " << keyPoint.response << ", ClassId: " << keyPoint.class_id << "\n";
+		}
 	}
 
 	void passKeyPointsToTracker(int index){
@@ -173,60 +192,94 @@ public:
 		}
 	}
 
+	void debugLostTrackerPoints(int frameIdx, int ptIdx, bool tracked, bool detected, float longDistance, float distance){
+		cout << "\nFrame: " << frameIdx << ", ";
+		cout << "Point: " << ptIdx << "\n";
+		cout << "tracked: " << tracked << "\n";
+
+		cout << "Detected: " << detected << "\n";
+		cout << "Longe distance: " << longDistance << "\n";
+		cout << "\tdistance: " << distance << "\n";
+		cout << "\tMax distance: " << Flags::getMaxEuclidianDistance() << "\n";
+
+		cout << "( (longDistance || !tracked) && detected): " << ((longDistance || !tracked) && detected) << "\n";
+	}
+
 	void getLostTrackerPoint(int index){
 
 		bool debug = true;
-		bool details = true;
+		bool details = false;
+
+		if (debug) cout << "Getting the lost tracker points\n";
 
 		vector<uchar> *status = frameManager.getTrackerStatus(index);
+		vector<Point2f> *input = frameManager.getTrackerInput(index);
+		vector<Point2f> *output = frameManager.getTrackerOutput(index);
 
+		if (debug) cout << "lost the keypoints: ";
 		for (int i = 0; i < status->size(); i++){
 
-			bool actualLosted = ((int)(*status)[i]) == 0;
-			bool lostPrevisiusly = lostPoints[i];
+			bool tracked = ((int)(*status)[i]) == 1;
+			bool detected = trackingPointsManager.isDetected(i);
+			//pointsChangeHistoric.status[i].detected;
 
-			if (actualLosted && !lostPrevisiusly){
-				countLostPoints++;
-				lostPoints[i] = true;
-				if (details) cout << "lost the keypoint: " << i << "\n";
+			Point2f p1 = (*input)[i];
+			Point2f p2 = (*output)[i];
+
+			float distance = sqrt(  pow((p1.x - p2.x), 2) + pow((p1.y - p2.y), 2) );
+			bool longDistance = distance > Flags::getMaxEuclidianDistance();
+
+			if ((longDistance || !tracked) && detected){
+
+				if (details) debugLostTrackerPoints(index, i, tracked, detected, longDistance, distance);
+
+				trackingPointsManager.setLostPoint(i, index, p1);
+
+				if (debug) cout << i << ", ";
 			}
 		}
 
-		if (debug) cout << "lost " << countLostPoints << " points\n";
+		//waitKey();
+
+		if (debug) cout << "\nlost " << trackingPointsManager.getLostCount() << " points\n";
 	}
 
-	bool verifyLostTrackRate(double maximum){
-		bool debug = true;
+	bool verifyLostTrackRate(float maximum){
+		return trackingPointsManager.verifyLostTrackRate(maximum);
+	}
 
-		float lostPercentual = 1.0f - (((float)countLostPoints) / ((float)Flags::getKeypointsNumber()));
+	void armazenateImage(int index, Mat *frame){
+		bool details = false;
+		Mat * image = frameManager.getFrameImage(index);
 
-		if (debug) cout << "Lost percentual: " << lostPercentual*100.0f << "\n";
+		if(details) cout << "Size of the parameter image is: " << frame->size() << "\n";
 
-		if (lostPercentual < maximum){
-			if (debug) "try recuperate points\n";
+		*image = frame->clone();
 
-			return true;
-		}
-		else{
-			return false;
-		}
+		if (details)  cout << "Size of the alocate image is: " << image->size() << "\n";
+	}
+
+	Mat *getImage(int index){
+		return frameManager.getFrameImage(index);
 	}
 
 	void recuperateTrackerPoints(int index, Mat frame){
+		bool debug = true;
 		bool details = true;
 
-		correspondences.clear();
-
-		bool debug = true;
-		if (debug) cout << "\tGetting DMatch\n";
-
 		if (!Flags::isLoadSaved()){
+			if (details) cout << "\t\tDetecting the actual frame keypoints\n";
 			detecKeyPoints(index, frame);
+			if (details) cout << "\t\tExtracting the actual keypoints features\n";
 			extractFeatures(index, frame);
 		}
 
-		matchingFeatures(Flags::getBestFrameToMatch(), index);
+		trackingPointsManager.recuperateTrackerPoints(index, frameManager);
 
+		//waitKey();
+
+		//matchingFeatures(Flags::getBestFrameToMatch(), index);
+		
 		/*vector<DMatch> *actualMatching = frameManager.getMatches(index);
 		vector<Point2f> *output = frameManager.getTrackerOutput(index);
 		vector<KeyPoint> *keyPoints = frameManager.getKeypoints(index);
@@ -256,6 +309,17 @@ public:
 		}*/
 		
 	}
+
+	void drawLostMatches(){
+		trackingPointsManager.drawLostMatches(frameManager);
+	}
+
+	//void drawLostMatches(int ptIdx, int frIdx){
+	//	vector <DMatch> * matches = trackingPointsManager.getMatchesForFramePoint(ptIdx, frIdx);
+	//	if (matches != NULL){
+
+	//	}
+	//}
 
 	void printPoints(vector<Point2f> points, Mat image){
 		
@@ -287,7 +351,7 @@ public:
 	}
 
 		//Drawer of tracking correspondent points
-	void drawTrack(int index, Mat *frame){
+	void drawTrack(int index, Mat *frameHit, Mat *frameMiss){
 		bool details = false;
 
 		vector<Point2f> *input = frameManager.getTrackerInput(index);;
@@ -296,26 +360,72 @@ public:
 
 		for (int i = 0; i < input->size(); i++){
 
-			bool statusAux = (((int)(*status)[i]) == 1);
+			bool statusAux = trackingPointsManager.isDetected(i);
+			//pointsChangeHistoric.status[i].detected;//(((int)(*status)[i]) == 1);
 			
-			if(details) cout << "Frame: "<< index << ", Point: " << i << ", status(" << ((int)(*status)[i]) << ")\n";
+			if (details) cout << "Frame: " << index << ", Point: " << i << ", status(" << trackingPointsManager.isDetected(i) << ")\n";
+
+			if (details) cout << "Converting the points\n";
 
 			CvPoint p1 = cvPoint((*input)[i].x, (*input)[i].y);
 			CvPoint p2 = cvPoint((*output)[i].x, (*output)[i].y);
 
+			bool looseNow = false;
+
+			if (details) cout << "Verify losse now points\n";
+			if (trackingPointsManager.isLostFrame(i, index)){//pointsChangeHistoric.status[i].lostFrame == index){
+				looseNow = true;
+				if (details) cout << "Losse now the point: " << i << "\n";
+				//waitkey();
+			}
+			else if (!trackingPointsManager.isDetected(i)){
+				CvPoint pAux = trackingPointsManager.getLastPointPosition(i);
+				p1 = pAux;
+				p2 = pAux;
+			}
+			
 			//if (!statusAux) waitKey();
-			drawCorrespondentPoints(frame, p1, p2, statusAux);
+			//drawCorrespondentPoints(frameHit, frameMiss, p1, p2, color, condition, recuperate, false, losseNow)
+			if (details) cout << "Draw correspondences\n";
+			drawCorrespondentPoints(frameHit, frameMiss, p1, p2, colors[i], statusAux, false, looseNow);
+			if (details) cout << "Finish draw\n";
 			//drawCorrespondentPoints(frame, p1, p2, !lostPoints[i]);
 			//imshow(getTrackerName(), *frame);
 			//waitKey(20);
 		}
 
-		for (int i = 0; i < correspondences.size(); i++){
-			correspondence c = correspondences[i];
-			drawCorrespondentPoints(frame, c.p1, c.p2, true, true);
-		}
+		//for (int i = 0; i < correspondences.size(); i++){
+		//	correspondence c = correspondences[i];
+		//	drawCorrespondentPoints(frameHit, frameMiss, c.p1, c.p2, true, true);
+		//}
 	}
 	
+	void extractTrackFeatures(int index, Mat frame){
+
+		bool debug = true;
+
+		if (debug) cout << "\Extracting tracking features\n";
+
+		vector<Point2f> * output = frameManager.getTrackerOutput(index);
+		Mat *trackerDescriptors = frameManager.getTrackerDescriptors(index);
+
+		vector<KeyPoint> trackerKeypoints;
+		
+
+		for (int i = 0; i < output->size(); i++){
+
+			Point2f point = (*output)[i];
+
+			//Size: 8, Angle : -1, Octave : 0, Response : 0, ClassId : -1
+			KeyPoint keyPoint = KeyPoint(point, Flags::getKeyPointsSize());
+
+			trackerKeypoints.push_back(keyPoint);
+		}
+
+		featuresExtractor->compute(frame, trackerKeypoints, *trackerDescriptors);
+	}
+
+
 	//Extract and Matching keypoints
 	void extractFeatures(int index, Mat frame){
 		bool debug = false;
@@ -337,35 +447,6 @@ public:
 
 	void matchingFeatures(int index){
 		matchingFeatures(index - 1, index);
-	}
-
-	void matchAll(string location){
-		//int frameCount = frameManager.getSize();
-
-		//vector<Mat> descriptors;
-
-		//for (int i = 0; i < frameCount; i++){
-		//	cout << "Get the descriptor: " << i << "\n";
-
-		//	Mat descriptor = *frameManager.getDescriptors(i);
-
-		//	cout << "Add the descriptor: " << i << "\n";
-
-		//	descriptors.push_back(descriptor);
-		//}
-
-		////matcher->add(descriptors);
-
-		//vector<DMatch> matches;
-		//matcher->match(descriptors[0], );
-
-		//string finalName = location + "//" + "MatchingAll" + Flags::getFileDataExtension();
-
-		//FileStorage fs(finalName, FileStorage::WRITE);
-
-		//matcher->write(fs);
-
-		//fs.release();
 	}
 
 	vector<DMatch> * matchingFeatures(int idxDescriptor1, int idxDescriptor2){
@@ -390,11 +471,12 @@ public:
 		//}
 	}
 		
-	void drawMatchs(int index, Mat *frame){
-		drawMatchs(index - 1, index, frame);
-	}
 		//Drawer of matching points
-	void drawMatchs(int idxPoint1, int idxPoint2, Mat *frame){
+	void drawMatchs(int index, Mat *frameHit, Mat *frameMiss){
+		drawMatchs(index - 1, index, frameHit, frameMiss);
+	}
+		
+	void drawMatchs(int idxPoint1, int idxPoint2, Mat *frameHit, Mat *frameMiss){
 		bool details = false;
 		vector<DMatch> *dMatchs = frameManager.getMatches(idxPoint2);
 
@@ -417,7 +499,7 @@ public:
 				KeyPoint keyPoint1 = (*points1)[idxPoint1];
 				KeyPoint keyPoint2 = (*points2)[idxPoint2];
 
-				drawCorrespondentPoints(frame, keyPoint1.pt, keyPoint2.pt, distance < Flags::getMatcherError());
+				drawCorrespondentPoints(frameHit, frameMiss, keyPoint1.pt, keyPoint2.pt, colors[i], distance < Flags::getMatcherError());
 				//drawLineToKeyPoints(frame, keyPoint1, keyPoint2, distance);
 			}
 		//}
@@ -440,41 +522,88 @@ public:
 private:
 
 	//Tracking auxiliar functions
-	void initialyseLostPointsVector(){
-		for (int i = 0; i < Flags::getKeypointsNumber(); i++){
-			lostPoints.push_back(false);
+
+	void initialyseColorVector(){
+		RNG rng(12345);
+		for (int i = 0; i < trackingPointsManager.getKeyPointsFounded(); i++){
+
+			Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+			colors.push_back(color);
 		}
 	}
 
 	//Draw correspondent points, with oberservin a condition of correctness
-	void drawCorrespondentPoints(Mat *image, CvPoint p1, CvPoint p2, bool condition, bool recuperate = false){
+	void drawCorrespondentPoints(Mat *frameHit, Mat *frameMiss, CvPoint p1, CvPoint p2, Scalar color, bool condition, 
+		bool recuperate = false, bool losseNow = false){
 		bool details = false;
-		int radius = 2;
+		int radius = 4;
 
-		Scalar cPoint1, cPoint2, cLine;
+		if (losseNow){
+			radius = 16;
+			drawCorrespondences(frameHit, p1, p2, radius, color);
+		}
 
+		Mat *image;
+		
 		if (recuperate){
-			if (details) cout << "Reuperate Point\n";
-			cPoint1 = CV_RGB(255, 0, 255);
-			cPoint2 = CV_RGB(100, 0, 100);
-			cLine = CV_RGB(200, 0, 200);
+			if (details) cout << "Recuperate Point\n";
+			image = frameHit;
+		}
+		else if (condition){
+			if (details) cout << "Good Point\n";
+			image = frameHit;
 		}
 		else{
-			if (condition){
-				if (details) cout << "Good Point\n";
-				cPoint1 = CV_RGB(255, 255, 0);
-				cPoint2 = CV_RGB(200, 0, 0);
-				cLine = CV_RGB(255, 100, 0);
-			}
-			else{
-				if (details) cout << "BadPoint\n";
-				cPoint1 = CV_RGB(0, 255, 255);
-				cPoint2 = CV_RGB(0, 0, 200);
-				cLine = CV_RGB(0, 100, 255);
-			}
+			if (details) cout << "BadPoint\n";
+			image = frameMiss;
 		}
-		line(*image, p1, p2, cLine, 1);
-		circle(*image, p1, radius, cPoint1, -1, CV_AA, 0);
-		circle(*image, p2, radius, cPoint2, -1, CV_AA, 0);
+
+		drawCorrespondences(image, p1, p2, radius, color);
 	}
+
+	void drawCorrespondences(Mat *image, Point2f p1, Point2f p2, int radius, Scalar color){
+		bool details = true;
+
+		line(*image, p1, p2, color, 1);
+		circle(*image, p1, radius, color, 1, CV_AA, 0);
+		circle(*image, p2, radius, color, 1, CV_AA, 0);
+	}
+
+	/*
+	Scalar cPoint1, cPoint2, cLine;
+
+	cPoint1 = color;
+	cPoint2 = color;
+	cLine = color;
+
+	if (recuperate){
+	if (details) cout << "Recuperate Point\n";
+	cPoint1 = CV_RGB(255, 0, 255);
+	cPoint2 = CV_RGB(100, 0, 100);
+	cLine = CV_RGB(200, 0, 200);
+
+	image = frameHit;
+	}
+	else{
+	if (condition){
+	if (details) cout << "Good Point\n";
+	cPoint1 = CV_RGB(255, 255, 0);
+	cPoint2 = CV_RGB(200, 0, 0);
+	cLine = CV_RGB(255, 100, 0);
+	image = frameHit;
+	}
+	else{
+	if (details) cout << "BadPoint\n";
+	cPoint1 = CV_RGB(0, 255, 255);
+	cPoint2 = CV_RGB(0, 0, 200);
+	cLine = CV_RGB(0, 100, 255);
+
+	image = frameMiss;
+	}
+	}
+
+	line(*image, p1, p2, cLine, 1);
+	circle(*image, p1, radius, cPoint1, 1, CV_AA, 0);
+	circle(*image, p2, radius, cPoint2, 1, CV_AA, 0);
+	*/
 };

@@ -33,6 +33,9 @@ public:
 	};
 
 	struct frameData{
+		//Image of a frame video
+		Mat image;
+
 		//Vector of keypoints for the fetures extractor
 		vector<KeyPoint> keyPoints;
 
@@ -46,6 +49,13 @@ public:
 		vector<Point2f> ptOutput;
 		vector<Point2f> ptInput;
 
+		//Lost points of the tracker
+		vector<Point2f> lostPoints;
+		//Index of lost points of the tracker
+		vector<int> lostPointsIndex;
+
+		Mat trackerDescriptors;
+
 		//Status of each tracked point
 		vector<uchar> status;
 
@@ -56,6 +66,10 @@ public:
 	vector<frameData> framesData;
 
 	//getters
+	Mat * getFrameImage(int index){
+		return &(getFrameData(index)->image);
+	}
+
 	vector <KeyPoint> * getKeypoints(int index){
 		return &(getFrameData(index)->keyPoints);
 	}
@@ -74,6 +88,18 @@ public:
 
 	vector <Point2f> * getTrackerOutput(int index){
 		return &(getFrameData(index)->ptOutput);
+	}
+
+	vector <Point2f> * getLostPoints(int index){
+		return &(getFrameData(index)->lostPoints);
+	}
+
+	vector <int> * getLostIndex(int index){
+		return &(getFrameData(index)->lostPointsIndex);
+	}
+
+	Mat * getTrackerDescriptors(int index){
+		return &(getFrameData(index)->trackerDescriptors);
 	}
 
 	vector <uchar> * getTrackerStatus(int index){

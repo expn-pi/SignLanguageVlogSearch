@@ -43,10 +43,14 @@ bool Flags::debug = true;
 //Show details of debug
 bool Flags::details = false;
 
+float Flags::maxEuclidianDistance = 30.0f;
+
 //Detect new keypoints
 bool Flags::newKeypoints = false;
 bool Flags::showKeyPoints = true;
 int Flags::keyPointsNumber = 128;
+int Flags::keyPointsRecuperateNumber = 32;
+int Flags::keyPointsSize = 16;
 
 //Track new points
 bool Flags::newTracking = true;
@@ -62,12 +66,13 @@ bool Flags::useDetected = false;
 bool Flags::changeTrackPoints = false;
 
 //Extract descriptors from keypoints and they respectives matches
-bool Flags::newDescriptors = false;
+bool Flags::newDescriptors = true;
 bool Flags::newMatches = false;
-bool Flags::showMatches = true;
+bool Flags::showMatches = false;
 float Flags::matcherError = 300.0f;
 bool Flags::getBestMach = false;
 int Flags::bestFrameToMatch = 19;
+int Flags::knnValure = 7;
 
 //Load file data
 bool Flags::loadSaved = false;
